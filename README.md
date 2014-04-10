@@ -22,7 +22,7 @@ type Test struct {
 }
 
 func main() {
-	root := jsongo.JsonMap{}
+	root := jsongo.JSONNode{}
 	root.At("1", "1.1", "1.1.1").Val(42)
 	root.At("1", "1.2", 0).Val(Test{"struct suck when you build json", 9000})
 	root.At("1", "1.2", 1).Val("Peace")
@@ -52,7 +52,7 @@ type Test struct {
 }
 
 func main() {
-	root := jsongo.JsonMap{}
+	root := jsongo.JSONNode{}
 	root.At("1", "1.1", "1.1.1").Val(42)
 
 	node := root.At("1", "1.2")
@@ -86,7 +86,7 @@ type Test struct {
 }
 
 func main() {
-	root := jsongo.JsonMap{}
+	root := jsongo.JSONNode{}
 	root.At("1", "1.1", "1.1.1").Val(42)
 
 	node := root.At("1", "1.2")
@@ -117,7 +117,7 @@ import (
 )
 
 func main() {
-	root := jsongo.JsonMap{}
+	root := jsongo.JSONNode{}
 
 	root.At("1", "2").Val(42)
 	tojson, err := json.Marshal(&root)
@@ -157,7 +157,7 @@ import (
 )
 
 func main() {
-	root := jsongo.JsonMap{}
+	root := jsongo.JSONNode{}
 
 	root.At("1", "2").Val(42)
 	tojson, err := json.Marshal(&root)
@@ -187,10 +187,14 @@ func main() {
 }
 ```
 
-Unmarshal just Generate map as needed
+Unmarshal can Generate map as needed and will overwrite any JSONNode of type Value if needed
+Except if you use UnmarshalDontGenerate to avoid Auto Generation while Unmarshaling, if you do so:
+-If needed a JSONNode without type will be set to Value and set with the value of Unmarshal of the data
+-JSONNode of type Array or Map wont generate new keys...
+
 
 ### Example
-#### Build => Marshal => Unmarshal
+#### Unmarshal Without UnmarshalDontGenerate
 ```go
 package main
 import (
@@ -204,8 +208,8 @@ type Test struct {
 }
 
 func main() {
-	root := jsongo.JsonMap{}
-	root2 := jsongo.JsonMap{}
+	root := jsongo.JSONNode{}
+	root2 := jsongo.JSONNode{}
 	
 	root.At("1", "1.1", "1.1.1").Val(42)
 
@@ -222,6 +226,7 @@ func main() {
 		return
 	}
 	fmt.Printf("root=>%s\n", tojson)
+	root2.At("1", "1.1")
 	err = json.Unmarshal(tojson, &root2)
 	if err != nil {
 		fmt.Printf("%s\n", err.Error())
@@ -236,9 +241,54 @@ func main() {
 }
 ```
 
+#### Unmarshal With UnmarshalDontGenerate
+```go
+package main
+import (
+	"github.com/benny-deluxe/jsongo"
+	"fmt"
+)
+type Test struct {
+	Static string `json:"static"`
+	Over   int    `json:"over"`
+}
+
+func main() {
+	root := jsongo.JSONNode{}
+	root2 := jsongo.JSONNode{}
+	
+	root.At("1", "1.1", "1.1.1").Val(42)
+
+	node := root.At("1", "1.2")
+	nodeArray := node.Array(4)
+	(*nodeArray)[0].Val(Test{"struct suck when you build json", 9000})
+	(*nodeArray)[1].Val("Peace")
+
+	root.At("2").Val("Oh Yeah")
+
+	tojson, err := json.Marshal(&root)
+	if err != nil {
+		fmt.Printf("%s\n", err.Error())
+		return
+	}
+	fmt.Printf("root=>%s\n", tojson)
+	
+	root2.At("1", "Tricks to set 1 as a map")
+	root2.At("1").UnmarshalDontGenerate(true, true)
+	err = json.Unmarshal(tojson, &root2)
+	if err != nil {
+		fmt.Printf("%s\n", err.Error())
+		return
+	}
+	tojson2, err := json.Marshal(&root2)
+	if err != nil {
+		fmt.Printf("%s\n", err.Error())
+		return
+	}
+	fmt.Printf("root2=>%s\n", tojson2)
+}
 
 **TODO**
 
--Unmarshal: make a JsonMap auto generate itself or not
 -get keys and or iterate in JsonMaps
 
