@@ -13,6 +13,7 @@ package jsongo
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 )
 
 //ErrorKeyAlreadyExist error if a key already exist in current JsonMap
@@ -26,6 +27,8 @@ var ErrorArrayNegativeValue = errors.New("jsongo negative index for array")
 
 //ErrorArrayNegativeValue error if you ask for a negative index in an array
 var ErrorAtUnsupportedType = errors.New("jsongo Unsupported Type as At argument")
+
+var ErrorRetrieveUserValue = errors.New("jsongo Cannot retrieve node's value which is not of type Value")
 
 //JsonMap Datastructure to build and maintain Nodes
 type JsonMap struct {
@@ -99,8 +102,8 @@ func (that *JsonMap) atArray(key int, val ...interface{}) *JsonMap {
 	return that.a[key].At(val...)
 }
 
-//TypeMap Turn this node to a map and Create a new element for key
-func (that *JsonMap) TypeMap(key string) *JsonMap {
+//Map Turn this node to a map and Create a new element for key
+func (that *JsonMap) Map(key string) *JsonMap {
 	if that.t != TypeUndefined && that.t != TypeMap {
 		panic(ErrorMultipleType)
 	}
@@ -115,8 +118,8 @@ func (that *JsonMap) TypeMap(key string) *JsonMap {
 	return that.m[key]
 }
 
-//TypeArray Turn this node to an array and/or set array size (reducing size will make you loose data)
-func (that *JsonMap) TypeArray(size int) *[]JsonMap {
+//Array Turn this node to an array and/or set array size (reducing size will make you loose data)
+func (that *JsonMap) Array(size int) *[]JsonMap {
 	if that.t == TypeUndefined {
 		that.t = TypeArray
 	} else if that.t != TypeArray {
@@ -149,6 +152,14 @@ func (that *JsonMap) Val(val interface{}) {
 	that.v = val
 }
 
+//Get Return user value as interface{}
+func (that *JsonMap) Get(val interface{}) interface{} {
+	if that.t != TypeValue {
+		panic(ErrorRetrieveUserValue)
+	}
+	return that.v
+}
+
 //Unset Will unset the node. All the children data will be lost
 func (that *JsonMap) Unset() {
 	*that = JsonMap{}
@@ -174,7 +185,7 @@ func (that *JsonMap) MarshalJSON() ([]byte, error) {
 	return ret, err
 }
 
-/*func (that *JsonMap) UnmarshalJSON(data []byte) error {
-	println("YOUHOU")
+func (that *JsonMap) UnmarshalJSON(data []byte) error {
+	fmt.Printf("YOUHOU %s\n", data)
 	return nil
-}*/
+}
