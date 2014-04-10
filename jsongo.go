@@ -13,7 +13,6 @@ package jsongo
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 )
 
 //ErrorKeyAlreadyExist error if a key already exist in current JsonMap
@@ -186,6 +185,42 @@ func (that *JsonMap) MarshalJSON() ([]byte, error) {
 }
 
 func (that *JsonMap) UnmarshalJSON(data []byte) error {
-	fmt.Printf("YOUHOU %s\n", data)
+	if len(data) == 0 {
+		return nil
+	}
+	if data[0] == '{' {
+		tmp := make(map[string]json.RawMessage)
+		err := json.Unmarshal(data, &tmp)
+		if err != nil {
+			return err
+		}
+		for k := range tmp {
+			err := json.Unmarshal(tmp[k], that.Map(k))
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	if data[0] == '[' {
+		var tmp []json.RawMessage
+		err := json.Unmarshal(data, &tmp)
+		if err != nil {
+			return err
+		}
+		for i := len(tmp) - 1; i >= 0; i-- {
+			err := json.Unmarshal(tmp[i], that.At(i))
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	var tmp interface{}
+	err :=  json.Unmarshal(data, &tmp)
+	if err != nil {
+		return err
+	}
+	that.Val(tmp)
 	return nil
 }

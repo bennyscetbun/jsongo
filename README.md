@@ -187,9 +187,58 @@ func main() {
 }
 ```
 
-TODO
-____
+Unmarshal just Generate map as needed
 
-Unmarshal to be Unmarshaler compliant
-AutoUnmarshal will help you build a Jsongo schema from a []byte json
+### Example
+#### Build => Marshal => Unmarshal
+```go
+package main
+import (
+	"github.com/benny-deluxe/jsongo"
+	"fmt"
+)
+
+type Test struct {
+	Static string `json:"static"`
+	Over   int    `json:"over"`
+}
+
+func main() {
+	root := jsongo.JsonMap{}
+	root2 := jsongo.JsonMap{}
+	
+	root.At("1", "1.1", "1.1.1").Val(42)
+
+	node := root.At("1", "1.2")
+	nodeArray := node.Array(4)
+	(*nodeArray)[0].Val(Test{"struct suck when you build json", 9000})
+	(*nodeArray)[1].Val("Peace")
+
+	root.At("2").Val("Oh Yeah")
+
+	tojson, err := json.Marshal(&root)
+	if err != nil {
+		fmt.Printf("%s\n", err.Error())
+		return
+	}
+	fmt.Printf("root=>%s\n", tojson)
+	err = json.Unmarshal(tojson, &root2)
+	if err != nil {
+		fmt.Printf("%s\n", err.Error())
+		return
+	}
+	tojson2, err := json.Marshal(&root2)
+	if err != nil {
+		fmt.Printf("%s\n", err.Error())
+		return
+	}
+	fmt.Printf("root2=>%s\n", tojson2)
+}
+```
+
+
+**TODO**
+
+-Unmarshal: make a JsonMap auto generate itself or not
+-get keys and or iterate in JsonMaps
 
