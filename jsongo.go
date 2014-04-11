@@ -13,6 +13,8 @@ package jsongo
 import (
 	"encoding/json"
 	"errors"
+	"reflect"
+	//"fmt"
 )
 
 //ErrorKeyAlreadyExist error if a key already exist in current JSONNode
@@ -30,28 +32,38 @@ var ErrorAtUnsupportedType = errors.New("jsongo Unsupported Type as At argument"
 //ErrorRetrieveUserValue error if you ask the value of a node that is not a value node
 var ErrorRetrieveUserValue = errors.New("jsongo Cannot retrieve node's value which is not of type value")
 
-//ErrorTypeUnmarshaling error if you try to unmarshal something in the wrong type 
+//ErrorTypeUnmarshaling error if you try to unmarshal something in the wrong type
 var ErrorTypeUnmarshaling = errors.New("jsongo Wrong type when Unmarshaling")
+
+//ErrorUnknowType error if you try to use an unknow JSONNodeType
+var ErrorUnknowType = errors.New("jsongo Unknow JSONNodeType")
+
+//ErrorValNotPointer error if you try to use Val without a valid pointer
+var ErrorValNotPointer = errors.New("jsongo: Val: arguments must be a pointer and not nil")
 
 //JSONNode Datastructure to build and maintain Nodes
 type JSONNode struct {
-	m map[string]*JSONNode
-	a []JSONNode
-	v interface{}
-	t jsonNodeType //Type of that JSONNode 0: Not defined, 1: map, 2: array, 3: value
-	dontGenerate bool //dont generate while Unmarshal
+	m            map[string]*JSONNode
+	a            []JSONNode
+	v            interface{}
+	t            JSONNodeType //Type of that JSONNode 0: Not defined, 1: map, 2: array, 3: value
+	dontGenerate bool         //dont generate while Unmarshal
 }
 
-type jsonNodeType int
+//JSONNodeType is used to set, check and get the inner type of a JSONNode
+type JSONNodeType uint
+
 const (
 	//TypeUndefined is set by default for empty JSONNode
-	TypeUndefined jsonNodeType = iota 
+	TypeUndefined JSONNodeType = iota
 	//TypeMap is set when a JSONNode is a Map
 	TypeMap
 	//TypeArray is set when a JSONNode is an Array
 	TypeArray
 	//TypeValue is set when a JSONNode is a Value Node
-	TypeValue 
+	TypeValue
+	//typeError help us detect errors
+	typeError
 )
 
 //At At helps you move through your node by building them on the fly
@@ -148,13 +160,32 @@ func (that *JSONNode) Array(size int) *[]JSONNode {
 }
 
 //Val Turn this JSONNode to Value type and set that value
+//if val is not a pointer we will turn it into one
+//if val is nil
 func (that *JSONNode) Val(val interface{}) {
+	rt := reflect.TypeOf(val)
+	var finalval interface{}
+	if val == nil {
+		finalval = &val
+	} else if rt.Kind() != reflect.Ptr {
+		rv := reflect.ValueOf(val)
+		var tmp reflect.Value
+		if rv.CanAddr() {
+			tmp = rv.Addr()
+		} else {
+			tmp = reflect.New(rt)
+			tmp.Elem().Set(rv)
+		}
+		finalval = tmp.Interface()
+	} else {
+		finalval = val
+	}
 	if that.t == TypeUndefined {
 		that.t = TypeValue
 	} else if that.t != TypeValue {
 		panic(ErrorMultipleType)
 	}
-	that.v = val
+	that.v = finalval
 }
 
 //Get Return user value as interface{}
@@ -165,6 +196,31 @@ func (that *JSONNode) Get() interface{} {
 	return that.v
 }
 
+//SetType Is use to set the Type of a node and return the current Node you are working on
+func (that *JSONNode) SetType(t JSONNodeType) *JSONNode {
+	if that.t != TypeUndefined && that.t != t {
+		panic(ErrorMultipleType)
+	}
+	if t >= typeError {
+		panic(ErrorUnknowType)
+	}
+	that.t = t
+	switch t {
+	case TypeMap:
+		that.m = make(map[string]*JSONNode, 0)
+	case TypeArray:
+		that.a = make([]JSONNode, 0)
+	case TypeValue:
+		that.Val(nil)
+	}
+	return that
+}
+
+//GetType Is use to Get the Type of a node
+func (that *JSONNode) GetType() JSONNodeType {
+	return that.t
+}
+
 //Unset Will unset everything in the JSONnode. All the children data will be lost
 func (that *JSONNode) Unset() {
 	*that = JSONNode{}
@@ -173,20 +229,21 @@ func (that *JSONNode) Unset() {
 //UnmarshalDontGenerate set or not if Unmarshall will generate anything in that JSONNode and its children
 //val: Setting this to true will avoid generation from Unmarshal but will save the value as interface if the current node is of type Value or Undefined
 //recurse: Will set all the children of that JSONNode
-func (that *JSONNode) UnmarshalDontGenerate(val bool, recurse bool) {
+func (that *JSONNode) UnmarshalDontGenerate(val bool, recurse bool) *JSONNode {
 	that.dontGenerate = val
 	if recurse {
 		switch that.t {
-			case TypeMap:
-				for k := range that.m {
-					that.m[k].UnmarshalDontGenerate(val, recurse)
-				}
-			case TypeArray:
-				for k := range that.a {
-					that.a[k].UnmarshalDontGenerate(val, recurse)
-				}
+		case TypeMap:
+			for k := range that.m {
+				that.m[k].UnmarshalDontGenerate(val, recurse)
+			}
+		case TypeArray:
+			for k := range that.a {
+				that.a[k].UnmarshalDontGenerate(val, recurse)
+			}
 		}
 	}
+	return that
 }
 
 //MarshalJSON Make JSONNode a Marshaler Interface compatible
@@ -209,55 +266,48 @@ func (that *JSONNode) MarshalJSON() ([]byte, error) {
 	return ret, err
 }
 
-//UnmarshalJSON Make JSONNode a Unmarshaler Interface compatible
-func (that *JSONNode) UnmarshalJSON(data []byte) error {
-	if len(data) == 0 {
-		return nil
+func (that *JSONNode) unmarshalMap(data []byte) error {
+	tmp := make(map[string]json.RawMessage)
+	err := json.Unmarshal(data, &tmp)
+	if err != nil {
+		return err
 	}
-	if !(that.dontGenerate && that.t == TypeUndefined) {
-		if data[0] == '{' {
-			if that.t != TypeMap && that.t != TypeUndefined {
-				return ErrorTypeUnmarshaling
-			}
-			tmp := make(map[string]json.RawMessage)
-			err := json.Unmarshal(data, &tmp)
+	for k := range tmp {
+		if _, ok := that.m[k]; ok {
+			err := json.Unmarshal(tmp[k], that.m[k])
 			if err != nil {
 				return err
 			}
-			for k := range tmp {
-				if _, ok := that.m[k]; ok {
-					err := json.Unmarshal(tmp[k], that.m[k])
-					if err != nil {
-						return err
-					}
-				} else if !that.dontGenerate {
-					err := json.Unmarshal(tmp[k], that.Map(k))
-					if err != nil {
-						return err
-					}
-				}
-			}
-			return nil
-		}
-		if data[0] == '[' {
-			if that.t != TypeArray && that.t != TypeUndefined {
-				return ErrorTypeUnmarshaling
-			}
-			var tmp []json.RawMessage
-			err := json.Unmarshal(data, &tmp)
+		} else if !that.dontGenerate {
+			err := json.Unmarshal(tmp[k], that.Map(k))
 			if err != nil {
 				return err
 			}
-			for i := len(tmp) - 1; i >= 0; i-- {
-				if !that.dontGenerate || i < len(that.a) {
-					err := json.Unmarshal(tmp[i], that.At(i))
-					if err != nil {
-						return err
-					}
-				}
-			}
-			return nil
 		}
+	}
+	return nil
+}
+
+func (that *JSONNode) unmarshalArray(data []byte) error {
+	var tmp []json.RawMessage
+	err := json.Unmarshal(data, &tmp)
+	if err != nil {
+		return err
+	}
+	for i := len(tmp) - 1; i >= 0; i-- {
+		if !that.dontGenerate || i < len(that.a) {
+			err := json.Unmarshal(tmp[i], that.At(i))
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (that *JSONNode) unmarshalValue(data []byte) error {
+	/*if that.dontGenerate {
+		return json.Unmarshal(data, &that.v)
 	}
 	var tmp interface{}
 	err :=  json.Unmarshal(data, &tmp)
@@ -265,5 +315,45 @@ func (that *JSONNode) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	that.Val(tmp)
+	return nil*/
+	if that.v != nil {
+		return json.Unmarshal(data, that.v)
+	}
+	var tmp interface{}
+	err := json.Unmarshal(data, &tmp)
+	if err != nil {
+		return err
+	}
+	that.Val(&tmp)
 	return nil
+}
+
+//UnmarshalJSON Make JSONNode a Unmarshaler Interface compatible
+func (that *JSONNode) UnmarshalJSON(data []byte) error {
+	if len(data) == 0 {
+		return nil
+	}
+	if that.dontGenerate && that.t == TypeUndefined {
+		return nil
+	}
+	if that.t == TypeValue {
+		return that.unmarshalValue(data)
+	}
+	if data[0] == '{' {
+		if that.t != TypeMap && that.t != TypeUndefined {
+			return ErrorTypeUnmarshaling
+		}
+		return that.unmarshalMap(data)
+	}
+	if data[0] == '[' {
+		if that.t != TypeArray && that.t != TypeUndefined {
+			return ErrorTypeUnmarshaling
+		}
+		return that.unmarshalArray(data)
+
+	}
+	if that.t == TypeUndefined {
+		return that.unmarshalValue(data)
+	}
+	return ErrorTypeUnmarshaling
 }
