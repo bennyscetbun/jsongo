@@ -41,17 +41,20 @@ var ErrorUnknowType = errors.New("jsongo Unknow JSONNodeType")
 //ErrorValNotPointer error if you try to use Val without a valid pointer
 var ErrorValNotPointer = errors.New("jsongo: Val: arguments must be a pointer and not nil")
 
-//ErrorGetKeys error if you try to get the keys from a JSONNode that isnt TypeMap or TypeArray
+//ErrorGetKeys error if you try to get the keys from a JSONNode that isnt a TypeMap or a TypeArray
 var ErrorGetKeys = errors.New("jsongo: GetKeys: JSONNode is not a TypeMap or TypeArray")
+
+//ErrorDeleteKey error if you try call DelKey on a JSONNode that isnt a TypeMap
+var ErrorDeleteKey = errors.New("jsongo: DelKey: This JSONNode is not a TypeMap")
 
 //JSONNode Datastructure to build and maintain Nodes
 type JSONNode struct {
-	m            map[string]*JSONNode
-	a            []JSONNode
-	v            interface{}
-	vChanged	 bool			//True if we changed the type of the value
-	t            JSONNodeType //Type of that JSONNode 0: Not defined, 1: map, 2: array, 3: value
-	dontGenerate bool         //dont generate while Unmarshal
+	m          map[string]*JSONNode
+	a          []JSONNode
+	v          interface{}
+	vChanged   bool         //True if we changed the type of the value
+	t          JSONNodeType //Type of that JSONNode 0: Not defined, 1: map, 2: array, 3: value
+	dontExpand bool         //dont expand while Unmarshal
 }
 
 //JSONNodeType is used to set, check and get the inner type of a JSONNode
@@ -70,9 +73,12 @@ const (
 	typeError
 )
 
-//At At helps you move through your node by building them on the fly
+//At helps you move through your node by building them on the fly
+//
 //val can be string or int only
+//
 //strings are keys for TypeMap
+//
 //ints are index in TypeArray (it will make array grow on the fly, so you should start to populate with the biggest index first)*
 func (that *JSONNode) At(val ...interface{}) *JSONNode {
 	if len(val) == 0 {
@@ -208,30 +214,34 @@ func (that *JSONNode) Get() interface{} {
 func (that *JSONNode) GetKeys() []interface{} {
 	var ret []interface{}
 	switch that.t {
-		case TypeMap:
-			nb := len(that.m)
-			ret = make([]interface{}, nb)
-			for key := range that.m {
-				nb--
-				ret[nb] = key
-			}
-		case TypeArray:
-			nb := len(that.a)
-			ret = make([]interface{}, nb)
-			for nb > 0 {
-				nb--
-				ret[nb] = nb
-			}
-		default:
-			panic(ErrorGetKeys)
+	case TypeMap:
+		nb := len(that.m)
+		ret = make([]interface{}, nb)
+		for key := range that.m {
+			nb--
+			ret[nb] = key
+		}
+	case TypeArray:
+		nb := len(that.a)
+		ret = make([]interface{}, nb)
+		for nb > 0 {
+			nb--
+			ret[nb] = nb
+		}
+	default:
+		panic(ErrorGetKeys)
 	}
 	return ret
 }
 
 //Len Return the length of the current Node
+//
 // if TypeUndefined return 0
+//
 // if TypeValue return 1
+//
 // if TypeArray return the size of the array
+//
 // if TypeMap return the size of the map
 func (that *JSONNode) Len() int {
 	var ret int
@@ -276,20 +286,43 @@ func (that *JSONNode) Unset() {
 	*that = JSONNode{}
 }
 
-//UnmarshalDontGenerate set or not if Unmarshall will generate anything in that JSONNode and its children
-//val: Setting this to true will avoid generation from Unmarshal but will save the value as interface if the current node is of type Value or Undefined
-//recurse: Will set all the children of that JSONNode
-func (that *JSONNode) UnmarshalDontGenerate(val bool, recurse bool) *JSONNode {
-	that.dontGenerate = val
+//DelKey will remove a key in the map.
+//
+//return the current JSONNode.
+func (that *JSONNode) DelKey(key string) *JSONNode {
+	if that.t != TypeMap {
+		panic(ErrorDeleteKey)
+	}
+	delete(that.m, key)
+	return that
+}
+
+//UnmarshalDontExpand set or not if Unmarshall will generate anything in that JSONNode and its children
+//
+//val: will change the expanding rules for this node
+//
+//- The type wont be change for any type
+//
+//- Array wont grow
+//
+//- New keys wont be added to Map
+//
+//- Values set to nil "*.Val(nil)*" will be turn into the type decide by Json
+//
+//- It will respect any current mapping and will return errors if needed
+//
+//recurse: if true, it will set all the children of that JSONNode with val
+func (that *JSONNode) UnmarshalDontExpand(val bool, recurse bool) *JSONNode {
+	that.dontExpand = val
 	if recurse {
 		switch that.t {
 		case TypeMap:
 			for k := range that.m {
-				that.m[k].UnmarshalDontGenerate(val, recurse)
+				that.m[k].UnmarshalDontExpand(val, recurse)
 			}
 		case TypeArray:
 			for k := range that.a {
-				that.a[k].UnmarshalDontGenerate(val, recurse)
+				that.a[k].UnmarshalDontExpand(val, recurse)
 			}
 		}
 	}
@@ -328,7 +361,7 @@ func (that *JSONNode) unmarshalMap(data []byte) error {
 			if err != nil {
 				return err
 			}
-		} else if !that.dontGenerate {
+		} else if !that.dontExpand {
 			err := json.Unmarshal(tmp[k], that.Map(k))
 			if err != nil {
 				return err
@@ -345,7 +378,7 @@ func (that *JSONNode) unmarshalArray(data []byte) error {
 		return err
 	}
 	for i := len(tmp) - 1; i >= 0; i-- {
-		if !that.dontGenerate || i < len(that.a) {
+		if !that.dontExpand || i < len(that.a) {
 			err := json.Unmarshal(tmp[i], that.At(i))
 			if err != nil {
 				return err
@@ -356,16 +389,6 @@ func (that *JSONNode) unmarshalArray(data []byte) error {
 }
 
 func (that *JSONNode) unmarshalValue(data []byte) error {
-	/*if that.dontGenerate {
-		return json.Unmarshal(data, &that.v)
-	}
-	var tmp interface{}
-	err :=  json.Unmarshal(data, &tmp)
-	if err != nil {
-		return err
-	}
-	that.Val(tmp)
-	return nil*/
 	if that.v != nil {
 		return json.Unmarshal(data, that.v)
 	}
@@ -374,7 +397,7 @@ func (that *JSONNode) unmarshalValue(data []byte) error {
 	if err != nil {
 		return err
 	}
-	that.Val(&tmp)
+	that.Val(tmp)
 	return nil
 }
 
@@ -383,7 +406,7 @@ func (that *JSONNode) UnmarshalJSON(data []byte) error {
 	if len(data) == 0 {
 		return nil
 	}
-	if that.dontGenerate && that.t == TypeUndefined {
+	if that.dontExpand && that.t == TypeUndefined {
 		return nil
 	}
 	if that.t == TypeValue {
