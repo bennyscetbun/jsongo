@@ -5,7 +5,7 @@ jsongo
 
 [json.Marshal](http://golang.org/pkg/encoding/json/#Marshal) and [json.Unmarshal](http://golang.org/pkg/encoding/json/#Unmarshal) have never been that easy
 
-**If you had only one function to look at, look at the "At" function**
+**If you had only one function to look at, look at the "[At](#at)" function**
 
 You can find the doc on godoc.org [![GoDoc](https://godoc.org/github.com/bennyscetbun/jsongo?status.png)](https://godoc.org/github.com/bennyscetbun/jsongo)
 
