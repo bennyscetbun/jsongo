@@ -358,7 +358,7 @@ Unmarshal using JSONNode follow some simple rules:
 - It will respect any current mapping and will return errors if needed
 
 You can set a node as "DontExpand" with the UnmarshalDontExpand function and thoose rules will apply:
-The type wont be change for any type
+- The type wont be change for any type
 - Array wont grow
 - New keys wont be added to Map
 - Values set to nil "*.Val(nil)*" will be turn into the type decide by Json
