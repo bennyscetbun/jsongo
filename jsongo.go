@@ -41,11 +41,15 @@ var ErrorUnknowType = errors.New("jsongo Unknow JSONNodeType")
 //ErrorValNotPointer error if you try to use Val without a valid pointer
 var ErrorValNotPointer = errors.New("jsongo: Val: arguments must be a pointer and not nil")
 
+//ErrorGetKeys error if you try to get the keys from a JSONNode that isnt TypeMap or TypeArray
+var ErrorGetKeys = errors.New("jsongo: GetKeys: JSONNode is not a TypeMap or TypeArray")
+
 //JSONNode Datastructure to build and maintain Nodes
 type JSONNode struct {
 	m            map[string]*JSONNode
 	a            []JSONNode
 	v            interface{}
+	vChanged	 bool			//True if we changed the type of the value
 	t            JSONNodeType //Type of that JSONNode 0: Not defined, 1: map, 2: array, 3: value
 	dontGenerate bool         //dont generate while Unmarshal
 }
@@ -67,9 +71,9 @@ const (
 )
 
 //At At helps you move through your node by building them on the fly
-//val can be string or int values
-//string are keys for map in json
-//int are index in array in json
+//val can be string or int only
+//strings are keys for TypeMap
+//ints are index in TypeArray (it will make array grow on the fly, so you should start to populate with the biggest index first)*
 func (that *JSONNode) At(val ...interface{}) *JSONNode {
 	if len(val) == 0 {
 		return that
@@ -119,7 +123,7 @@ func (that *JSONNode) atArray(key int, val ...interface{}) *JSONNode {
 	return that.a[key].At(val...)
 }
 
-//Map Turn this JSONNode to a map and Create a new element for key
+//Map Turn this JSONNode to a TypeMap and/or Create a new element for key if necessary and return it
 func (that *JSONNode) Map(key string) *JSONNode {
 	if that.t != TypeUndefined && that.t != TypeMap {
 		panic(ErrorMultipleType)
@@ -129,13 +133,13 @@ func (that *JSONNode) Map(key string) *JSONNode {
 		that.t = TypeMap
 	}
 	if _, ok := that.m[key]; ok {
-		panic(ErrorKeyAlreadyExist)
+		return that.m[key]
 	}
 	that.m[key] = &JSONNode{}
 	return that.m[key]
 }
 
-//Array Turn this JSONNode to an array and/or set array size (reducing size will make you loose data)
+//Array Turn this JSONNode to a TypeArray and/or set the array size (reducing size will make you loose data)
 func (that *JSONNode) Array(size int) *[]JSONNode {
 	if that.t == TypeUndefined {
 		that.t = TypeArray
@@ -146,10 +150,10 @@ func (that *JSONNode) Array(size int) *[]JSONNode {
 		panic(ErrorArrayNegativeValue)
 	}
 	var min int
-	if size < len(that.m) {
+	if size < len(that.a) {
 		min = size
 	} else {
-		min = len(that.m)
+		min = len(that.a)
 	}
 	newa := make([]JSONNode, size)
 	for i := 0; i < min; i++ {
@@ -159,14 +163,18 @@ func (that *JSONNode) Array(size int) *[]JSONNode {
 	return &(that.a)
 }
 
-//Val Turn this JSONNode to Value type and set that value
-//if val is not a pointer we will turn it into one
-//if val is nil
+//Val Turn this JSONNode to Value type and/or set that value to val
 func (that *JSONNode) Val(val interface{}) {
+	if that.t == TypeUndefined {
+		that.t = TypeValue
+	} else if that.t != TypeValue {
+		panic(ErrorMultipleType)
+	}
 	rt := reflect.TypeOf(val)
 	var finalval interface{}
 	if val == nil {
 		finalval = &val
+		that.vChanged = true
 	} else if rt.Kind() != reflect.Ptr {
 		rv := reflect.ValueOf(val)
 		var tmp reflect.Value
@@ -177,23 +185,65 @@ func (that *JSONNode) Val(val interface{}) {
 			tmp.Elem().Set(rv)
 		}
 		finalval = tmp.Interface()
+		that.vChanged = true
 	} else {
 		finalval = val
-	}
-	if that.t == TypeUndefined {
-		that.t = TypeValue
-	} else if that.t != TypeValue {
-		panic(ErrorMultipleType)
 	}
 	that.v = finalval
 }
 
-//Get Return user value as interface{}
+//Get Return value of a TypeValue as interface{}
 func (that *JSONNode) Get() interface{} {
 	if that.t != TypeValue {
 		panic(ErrorRetrieveUserValue)
 	}
+	if that.vChanged {
+		rv := reflect.ValueOf(that.v)
+		return rv.Elem().Interface()
+	}
 	return that.v
+}
+
+//GetKeys Return a slice interface that represent the keys to use with the At fonction (Works only on TypeMap and TypeArray)
+func (that *JSONNode) GetKeys() []interface{} {
+	var ret []interface{}
+	switch that.t {
+		case TypeMap:
+			nb := len(that.m)
+			ret = make([]interface{}, nb)
+			for key := range that.m {
+				nb--
+				ret[nb] = key
+			}
+		case TypeArray:
+			nb := len(that.a)
+			ret = make([]interface{}, nb)
+			for nb > 0 {
+				nb--
+				ret[nb] = nb
+			}
+		default:
+			panic(ErrorGetKeys)
+	}
+	return ret
+}
+
+//Len Return the length of the current Node
+// if TypeUndefined return 0
+// if TypeValue return 1
+// if TypeArray return the size of the array
+// if TypeMap return the size of the map
+func (that *JSONNode) Len() int {
+	var ret int
+	switch that.t {
+	case TypeMap:
+		ret = len(that.m)
+	case TypeArray:
+		ret = len(that.a)
+	case TypeValue:
+		ret = 1
+	}
+	return ret
 }
 
 //SetType Is use to set the Type of a node and return the current Node you are working on

@@ -1,294 +1,265 @@
 jsongo
 ======
 
-Jsongo is a simple library to help you build Json without static struct
+**Jsongo is a simple library to help you build Json without static struct**
 
-You can find the doc on godoc.org [Here](http://godoc.org/github.com/Benny-Deluxe/jsongo) 
+[json.Marshal](http://golang.org/pkg/encoding/json/#Marshal) and [json.Unmarshal](http://golang.org/pkg/encoding/json/#Unmarshal) have never been that easy
 
-The first thing you should use is the At function and the Val function
-### Example
-#### simple
+**If you had only one function to look at, look at the "At" function**
 
+You can find the doc on godoc.org [Here](http://godoc.org/github.com/Benny-Deluxe/jsongo)
+
+
+##JsonNode
+
+JsonNode is the basic Structure that you must use when using jsongo. It can either be a:
+- Map (jsongo.TypeMap)
+- Array (jsongo.TypeArray)
+- Value (jsongo.TypeValue) *Precisely a pointer store in an interface{}*
+- Undefined (jsongo.TypeUndefined) *default type*
+
+*When a JSONNode Type is set you cant change it without using Unset() first*
+____
+###Val
+####Synopsis:
+turn this JSONNode to TypeValue and set that value (val must be a pointer)
 ```go
-package main
-import (
-	"github.com/benny-deluxe/jsongo"
-	"fmt"
-)
-
-type Test struct {
-	Static string `json:"static"`
-	Over int `json:"over"`
-}
-
-func main() {
-	root := jsongo.JSONNode{}
-	root.At("1", "1.1", "1.1.1").Val(42)
-	root.At("1", "1.2", 0).Val(Test{"struct suck when you build json", 9000})
-	root.At("1", "1.2", 1).Val("Peace")
-	root.At("2").Val("Oh Yeah")
-	tojson, err := json.Marshal(&root)
-	if err != nil {
-		fmt.Printf("%s\n", err.Error())
-		return
-	}
-	fmt.Printf("%s\n", tojson)
-}
+func (that *JSONNode) Val(val interface{}) 
 ```
 
-You can avoid to move with the At function all the time (and save some time)
-### Example
-#### simple Faster
+####Examples
+#####code:
 ```go
 package main
-import (
-	"github.com/benny-deluxe/jsongo"
-	"fmt"
-)
 
-type Test struct {
-	Static string `json:"static"`
-	Over int `json:"over"`
-}
+import (
+    "github.com/benny-deluxe/jsongo"
+)
 
 func main() {
 	root := jsongo.JSONNode{}
-	root.At("1", "1.1", "1.1.1").Val(42)
-
-	node := root.At("1", "1.2")
-	node.At(0).Val(Test{"struct suck when you build json", 9000})
-	node.At(1).Val("Peace")
-
-	root.At("2").Val("Oh Yeah")
-
-	tojson, err := json.Marshal(&root)
-	if err != nil {
-		fmt.Printf("%s\n", err.Error())
-		return
-	}
-	fmt.Printf("%s\n", tojson)
+	root.Val(42)
+	root.DebugPrint("")
 }
 ```
-
-You can use the Array function to set transform the current node into an array and set its size
-### Example
-#### simple even Faster
+#####output:
+```
+42
+```
+#####code:
 ```go
 package main
-import (
-	"github.com/benny-deluxe/jsongo"
-	"fmt"
-)
 
-type Test struct {
-	Static string `json:"static"`
-	Over int `json:"over"`
+import (
+    "github.com/benny-deluxe/jsongo"
+)
+type MyStruct struct {
+	Member1 string
+	Member2 int
 }
 
 func main() {
 	root := jsongo.JSONNode{}
-	root.At("1", "1.1", "1.1.1").Val(42)
-
-	node := root.At("1", "1.2")
-	nodeArray := node.Array(4)
-	(*nodeArray)[0].Val(Test{"struct suck when you build json", 9000})
-	(*nodeArray)[1].Val("Peace")
-
-	root.At("2").Val("Oh Yeah")
-
-	tojson, err := json.Marshal(&root)
-	if err != nil {
-		fmt.Printf("%s\n", err.Error())
-		return
-	}
-	fmt.Printf("%s\n", tojson)
+	root.Val(MyStruct{"The answer", 42})
+	root.DebugPrint("")
 }
 ```
-
-You Beware that when you use At on a node you gonna set if it s a Map, a Array or a Value. You can use Unset to undo that.
-
-### Examples
-#### Common error
-```go
-package main
-import (
-	"github.com/benny-deluxe/jsongo"
-	"fmt"
-)
-
-func main() {
-	root := jsongo.JSONNode{}
-
-	root.At("1", "2").Val(42)
-	tojson, err := json.Marshal(&root)
-	if err != nil {
-		fmt.Printf("%s\n", err.Error())
-		return
-	}
-	fmt.Printf("%s\n", tojson)
-
-	root.At("1", 0).Val(42)
-	tojson, err = json.Marshal(&root)
-	if err != nil {
-		fmt.Printf("%s\n", err.Error())
-		return
-	}
-	fmt.Printf("%s\n", tojson)
-
-	/*
-	//You can even try that one :)
-	root.At("1").Val(42)
-	tojson, err = json.Marshal(&root)
-	if err != nil {
-		fmt.Printf("%s\n", err.Error())
-		return
-	}
-	fmt.Printf("%s\n", tojson)
-	*/
+#####output:
+```
+{
+  "Member1": "The answer",
+  "Member2": 42
 }
 ```
-
-#### Use of Unset
+_____
+###Array
+####Synopsis:
+ Turn this JSONNode to a TypeArray and/or set the array size (reducing size will make you loose data)
 ```go
-package main
-import (
-	"github.com/benny-deluxe/jsongo"
-	"fmt"
-)
-
-func main() {
-	root := jsongo.JSONNode{}
-
-	root.At("1", "2").Val(42)
-	tojson, err := json.Marshal(&root)
-	if err != nil {
-		fmt.Printf("%s\n", err.Error())
-		return
-	}
-	fmt.Printf("%s\n", tojson)
-	root.At("1").Unset()
-	root.At("1", 0).Val(42)
-	tojson, err = json.Marshal(&root)
-	if err != nil {
-		fmt.Printf("%s\n", err.Error())
-		return
-	}
-	fmt.Printf("%s\n", tojson)
-
-	//You can even try that one :)
-	root.At("1").Unset()
-	root.At("1").Val(42)
-	tojson, err = json.Marshal(&root)
-	if err != nil {
-		fmt.Printf("%s\n", err.Error())
-		return
-	}
-	fmt.Printf("%s\n", tojson)
-}
+func (that *JSONNode) Array(size int) *[]JSONNode
 ```
 
-Unmarshal can Generate map as needed and will overwrite any JSONNode of type Value if needed
-Except if you use UnmarshalDontGenerate to avoid Auto Generation while Unmarshaling, if you do so:
--If needed a JSONNode without type will be set to Value and set with the value of Unmarshal of the data
--JSONNode of type Array or Map wont generate new keys...
-
-
-### Example
-#### Unmarshal Without UnmarshalDontGenerate
+####Examples
+#####code:
 ```go
 package main
+
 import (
-	"github.com/benny-deluxe/jsongo"
-	"fmt"
+    "github.com/benny-deluxe/jsongo"
 )
 
-type Test struct {
-	Static string `json:"static"`
-	Over   int    `json:"over"`
-}
-
 func main() {
-	root := jsongo.JSONNode{}
-	root2 := jsongo.JSONNode{}
-	
-	root.At("1", "1.1", "1.1.1").Val(42)
-
-	node := root.At("1", "1.2")
-	nodeArray := node.Array(4)
-	(*nodeArray)[0].Val(Test{"struct suck when you build json", 9000})
-	(*nodeArray)[1].Val("Peace")
-
-	root.At("2").Val("Oh Yeah")
-
-	tojson, err := json.Marshal(&root)
-	if err != nil {
-		fmt.Printf("%s\n", err.Error())
-		return
-	}
-	fmt.Printf("root=>%s\n", tojson)
-	root2.At("1", "1.1")
-	err = json.Unmarshal(tojson, &root2)
-	if err != nil {
-		fmt.Printf("%s\n", err.Error())
-		return
-	}
-	tojson2, err := json.Marshal(&root2)
-	if err != nil {
-		fmt.Printf("%s\n", err.Error())
-		return
-	}
-	fmt.Printf("root2=>%s\n", tojson2)
+    root := jsongo.JSONNode{}
+	a := root.Array(4)
+    for i := 0; i < 4; i++ {
+        (*a)[i].Val(i)
+    }
+	root.DebugPrint("")
 }
 ```
-
-#### Unmarshal With UnmarshalDontGenerate
+#####output:
+```
+[
+  0,
+  1,
+  2,
+  3
+]
+```
+#####code:
 ```go
 package main
+
 import (
-	"github.com/benny-deluxe/jsongo"
-	"fmt"
+    "github.com/benny-deluxe/jsongo"
 )
-type Test struct {
-	Static string `json:"static"`
-	Over   int    `json:"over"`
-}
 
 func main() {
-	root := jsongo.JSONNode{}
-	root2 := jsongo.JSONNode{}
-	
-	root.At("1", "1.1", "1.1.1").Val(42)
-
-	node := root.At("1", "1.2")
-	nodeArray := node.Array(4)
-	(*nodeArray)[0].Val(Test{"struct suck when you build json", 9000})
-	(*nodeArray)[1].Val("Peace")
-
-	root.At("2").Val("Oh Yeah")
-
-	tojson, err := json.Marshal(&root)
-	if err != nil {
-		fmt.Printf("%s\n", err.Error())
-		return
-	}
-	fmt.Printf("root=>%s\n", tojson)
-	
-	root2.At("1", "Tricks to set 1 as a map")
-	root2.At("1").UnmarshalDontGenerate(true, true)
-	err = json.Unmarshal(tojson, &root2)
-	if err != nil {
-		fmt.Printf("%s\n", err.Error())
-		return
-	}
-	tojson2, err := json.Marshal(&root2)
-	if err != nil {
-		fmt.Printf("%s\n", err.Error())
-		return
-	}
-	fmt.Printf("root2=>%s\n", tojson2)
+    root := jsongo.JSONNode{}
+    a := root.Array(4)
+    for i := 0; i < 4; i++ {
+        (*a)[i].Val(i)
+    }
+    root.Array(2) //Here we reduce the size and we loose some data
+	root.DebugPrint("")
 }
+```
+#####output:
+```
+[
+  0,
+  1
+]
+```
+____
+###Map
+####Synopsis:
+Turn this JSONNode to a TypeMap and/or Create a new element for key if necessary and return it
+```go
+func (that *JSONNode) Map(key string) *JSONNode
+```
 
-**TODO**
+####Examples
+#####code:
+```go
+package main
 
--get keys and or iterate in JsonMaps
+import (
+    "github.com/benny-deluxe/jsongo"
+)
 
+func main() {
+    root := jsongo.JSONNode{}
+    root.Map("there").Val("you are")
+    root.Map("here").Val("you should be")
+	root.DebugPrint("")
+}
+```
+#####output:
+```
+{
+  "here": "you should be",
+  "there": "you are"
+}
+```
+#####code:
+```go
+package main
+
+import (
+    "github.com/benny-deluxe/jsongo"
+)
+
+func main() {
+    root := jsongo.JSONNode{}
+    root.Map("here").Val("you are")
+    root.Map("here").Val("you gonna PANIC")
+	root.DebugPrint("")
+}
+```
+#####output:
+```
+panic: jsongo key already exist
+```
+____
+###At
+####Synopsis:
+Helps you move through your node by building them on the fly
+
+*val can be string or int only*
+
+*strings are keys for TypeMap*
+
+*ints are index in TypeArray (it will make array grow on the fly, so you should start to populate with the biggest index first)*
+```go
+func (that *JSONNode) At(val ...interface{}) *JSONNode
+```
+
+####Examples
+#####code:
+```go
+package main
+
+import (
+    "github.com/benny-deluxe/jsongo"
+)
+
+func main() {
+    root := jsongo.JSONNode{}
+    root.At(4, "Who").Val("Let the dog out") //is equivalent to (*root.Array(5))[4].Map("Who").Val("Let the dog out")
+    root.DebugPrint("")
+}
+```
+#####output:
+```
+[
+  null,
+  null,
+  null,
+  null,
+  {
+    "Who": "Let the dog out"
+  }
+]
+```
+#####code:
+```go
+package main
+
+import (
+    "github.com/benny-deluxe/jsongo"
+)
+
+func main() {
+    root := jsongo.JSONNode{}
+    root.At(4, "Who").Val("Let the dog out")
+    //to win some time you can even even save a certain JSONNode
+	node := root.At(2, "What")
+	node.At("Can", "You").Val("do with that?")
+	node.At("Do", "You", "Think").Val("Of that")
+    root.DebugPrint("")
+}
+```
+#####output:
+```
+[
+  null,
+  null,
+  {
+    "What": {
+      "Can": {
+        "You": "do with that?"
+      },
+      "Do": {
+        "You": {
+          "Think": "Of that"
+        }
+      }
+    }
+  },
+  null,
+  {
+    "Who": "Let the dog out"
+  }
+]
+```
