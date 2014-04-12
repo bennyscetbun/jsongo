@@ -162,25 +162,6 @@ func main() {
   "there": "you are"
 }
 ```
-#####code:
-```go
-package main
-
-import (
-    "github.com/bennyscetbun/jsongo"
-)
-
-func main() {
-    root := jsongo.JSONNode{}
-    root.Map("here").Val("you are")
-    root.Map("here").Val("you gonna PANIC")
-	root.DebugPrint("")
-}
-```
-#####output:
-```
-panic: jsongo key already exist
-```
 ____
 ###At
 ####Synopsis:
