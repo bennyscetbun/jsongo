@@ -22,7 +22,7 @@ JsonNode is the basic Structure that you must use when using jsongo. It can eith
 ____
 ###Val
 ####Synopsis:
-turn this JSONNode to TypeValue and set that value (val must be a pointer)
+turn this JSONNode to TypeValue and set that value
 ```go
 func (that *JSONNode) Val(val interface{}) 
 ```
