@@ -44,8 +44,11 @@ var ErrorValNotPointer = errors.New("jsongo: Val: arguments must be a pointer an
 //ErrorGetKeys error if you try to get the keys from a JSONNode that isnt a TypeMap or a TypeArray
 var ErrorGetKeys = errors.New("jsongo: GetKeys: JSONNode is not a TypeMap or TypeArray")
 
-//ErrorDeleteKey error if you try call DelKey on a JSONNode that isnt a TypeMap
+//ErrorDeleteKey error if you try to call DelKey on a JSONNode that isnt a TypeMap
 var ErrorDeleteKey = errors.New("jsongo: DelKey: This JSONNode is not a TypeMap")
+
+//ErrorCopyType error if you try to call Copy on a JSONNode that isnt a TypeUndefined
+var ErrorCopyType = errors.New("jsongo: Copy: This JSONNode is not a TypeUndefined")
 
 //JSONNode Datastructure to build and maintain Nodes
 type JSONNode struct {
@@ -280,6 +283,43 @@ func (that *JSONNode) SetType(t JSONNodeType) *JSONNode {
 func (that *JSONNode) GetType() JSONNodeType {
 	return that.t
 }
+
+//Copy Will set this node like the one in argument. this node must be of type TypeUndefined
+//
+//if deepCopy is true we will copy all the children recursively else we will share the children
+//
+//return the current JSONNode
+func (that *JSONNode) Copy(other *JSONNode, deepCopy bool) *JSONNode {
+	if that.t != TypeUndefined {
+		panic(ErrorCopyType)
+	}
+	
+	if other.t == TypeValue {
+		*that = *other
+	} else if other.t == TypeArray {
+		if !deepCopy {
+			*that = *other
+		} else {
+			that.Array(len(other.a))
+			for i := range other.a {
+				that.At(i).Copy(other.At(i), deepCopy)
+			}
+		}
+	} else if other.t == TypeMap {
+		that.SetType(other.t)
+		if !deepCopy {
+			for val := range other.m {
+				that.m[val] = other.m[val]
+			}
+		} else {
+			for val := range other.m {
+				that.Map(val).Copy(other.At(val), deepCopy)
+			}
+		}
+	}
+	return that
+}
+
 
 //Unset Will unset everything in the JSONnode. All the children data will be lost
 func (that *JSONNode) Unset() {
