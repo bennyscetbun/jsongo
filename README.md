@@ -1,7 +1,7 @@
 jsongo
 ======
 
-**Jsongo is a simple library to help you build Json without static struct or map[string]interface**
+**Jsongo is a simple library for golang to help you build Json without static struct or map[string]interface**
 
 [json.Marshal](http://golang.org/pkg/encoding/json/#Marshal) and [json.Unmarshal](http://golang.org/pkg/encoding/json/#Unmarshal) have never been that easy
 
