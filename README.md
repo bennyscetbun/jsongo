@@ -7,6 +7,8 @@ jsongo
 
 **If you had only one function to look at, look at the "[At](#at)" function**
 
+***If you want an easy way to turn your json into a structure you should use the "[Print](#print)" function after unmarshalling json in a JSONNODE***
+
 You can find the doc on godoc.org [![GoDoc](https://godoc.org/github.com/bennyscetbun/jsongo?status.png)](https://godoc.org/github.com/bennyscetbun/jsongo)
 
 
@@ -243,6 +245,14 @@ func main() {
     "Who": "Let the dog out"
   }
 ]
+```
+____
+###Print
+####Synopsis:
+Helps you build your code by printing a go structure from the json you ve just unmarshaled
+
+```go
+func (that *JSONNode) Print()
 ```
 
 ____
