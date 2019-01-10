@@ -7,6 +7,7 @@
 // Source code and project home:
 // https://github.com/benny-deluxe/jsongo
 //
+//go:generate stringer -type=JSONNodeType
 
 package jsongo
 
@@ -293,7 +294,7 @@ func (that *JSONNode) Copy(other *JSONNode, deepCopy bool) *JSONNode {
 	if that.t != TypeUndefined {
 		panic(ErrorCopyType)
 	}
-	
+
 	if other.t == TypeValue {
 		*that = *other
 	} else if other.t == TypeArray {
@@ -319,7 +320,6 @@ func (that *JSONNode) Copy(other *JSONNode, deepCopy bool) *JSONNode {
 	}
 	return that
 }
-
 
 //Unset Will unset everything in the JSONnode. All the children data will be lost
 func (that *JSONNode) Unset() {
