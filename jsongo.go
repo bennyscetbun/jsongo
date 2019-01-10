@@ -214,6 +214,90 @@ func (that *JSONNode) Get() interface{} {
 	return that.v
 }
 
+// MustGetBool Return value of a TypeValue as bool
+// will panic if cant convert the internal value or if the node is not a TypeValue
+func (that *JSONNode) MustGetBool() bool {
+	return that.Get().(bool)
+}
+
+// MustGetString Return value of a TypeValue as string
+// will panic if cant convert the internal value or if the node is not a TypeValue
+func (that *JSONNode) MustGetString() string {
+	return that.Get().(string)
+}
+
+// MustGetInt Return value of a TypeValue as int
+// will panic if cant convert the internal value or if the node is not a TypeValue
+func (that *JSONNode) MustGetInt() int {
+	return (int)(that.Get().(float64))
+}
+
+// MustGetInt8 Return value of a TypeValue as int8
+// will panic if cant convert the internal value or if the node is not a TypeValue
+func (that *JSONNode) MustGetInt8() int8 {
+	return (int8)(that.Get().(float64))
+}
+
+// MustGetInt16 Return value of a TypeValue as int16
+// will panic if cant convert the internal value or if the node is not a TypeValue
+func (that *JSONNode) MustGetInt16() int16 {
+	return (int16)(that.Get().(float64))
+}
+
+// MustGetInt32 Return value of a TypeValue as int32
+// will panic if cant convert the internal value or if the node is not a TypeValue
+func (that *JSONNode) MustGetInt32() int32 {
+	return (int32)(that.Get().(float64))
+}
+
+// MustGetInt64 Return value of a TypeValue as int64
+// will panic if cant convert the internal value or if the node is not a TypeValue
+func (that *JSONNode) MustGetInt64() int64 {
+	return (int64)(that.Get().(float64))
+}
+
+// MustGetUint Return value of a TypeValue as uint
+// will panic if cant convert the internal value or if the node is not a TypeValue
+func (that *JSONNode) MustGetUint() uint {
+	return (uint)(that.Get().(float64))
+}
+
+// MustGetUint8 Return value of a TypeValue as uint8
+// will panic if cant convert the internal value or if the node is not a TypeValue
+func (that *JSONNode) MustGetUint8() uint8 {
+	return (uint8)(that.Get().(float64))
+}
+
+// MustGetUint16 Return value of a TypeValue as uint16
+// will panic if cant convert the internal value or if the node is not a TypeValue
+func (that *JSONNode) MustGetUint16() uint16 {
+	return (uint16)(that.Get().(float64))
+}
+
+// MustGetUint32 Return value of a TypeValue as uint32
+// will panic if cant convert the internal value or if the node is not a TypeValue
+func (that *JSONNode) MustGetUint32() uint32 {
+	return (uint32)(that.Get().(float64))
+}
+
+// MustGetUint64 Return value of a TypeValue as uint64
+// will panic if cant convert the internal value or if the node is not a TypeValue
+func (that *JSONNode) MustGetUint64() uint64 {
+	return (uint64)(that.Get().(float64))
+}
+
+// MustGetFloat32 Return value of a TypeValue as float32
+// will panic if cant convert the internal value or if the node is not a TypeValue
+func (that *JSONNode) MustGetFloat32() float32 {
+	return (float32)(that.Get().(float64))
+}
+
+// MustGetFloat64 Return value of a TypeValue as float64
+// will panic if cant convert the internal value or if the node is not a TypeValue
+func (that *JSONNode) MustGetFloat64() float64 {
+	return that.Get().(float64)
+}
+
 //GetKeys Return a slice interface that represent the keys to use with the At fonction (Works only on TypeMap and TypeArray)
 func (that *JSONNode) GetKeys() []interface{} {
 	var ret []interface{}
