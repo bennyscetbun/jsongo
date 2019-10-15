@@ -14,9 +14,9 @@ jsongo
 You can find the doc on godoc.org [![GoDoc](https://godoc.org/github.com/bennyscetbun/jsongo?status.png)](https://godoc.org/github.com/bennyscetbun/jsongo)
 
 
-## JsonNode
+## JSONNode
 
-JsonNode is the basic Structure that you must use when using jsongo. It can either be a:
+JSONNode is the basic Structure that you must use when using jsongo. It can either be a:
 - Map (jsongo.TypeMap)
 - Array (jsongo.TypeArray)
 - Value (jsongo.TypeValue) *Precisely a pointer store in an interface{}*
