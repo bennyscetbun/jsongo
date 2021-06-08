@@ -3,6 +3,7 @@ package jsongo
 import (
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -33,7 +34,14 @@ func (that *Node) printValue(indentlevel int, indentchar string) {
 
 func (that *Node) printMap(indentlevel int, indentchar string) {
 	fmt.Printf(" struct {\n")
+	//order keys to make print consistent
+	keys := make([]string, 0, len(that.m))
+
 	for key := range that.m {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
 		printfindent(indentlevel+1, indentchar, "%s", UpperCamelCase(key))
 		that.m[key].print(indentlevel+1, indentchar)
 		fmt.Printf(" `json:\"%s\"`\n", key)
