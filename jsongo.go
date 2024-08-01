@@ -18,40 +18,40 @@ import (
 	//"fmt"
 )
 
-//ErrorKeyAlreadyExist error if a key already exist in current Node
+// ErrorKeyAlreadyExist error if a key already exist in current Node
 var ErrorKeyAlreadyExist = errors.New("jsongo key already exist")
 
-//ErrorMultipleType error if a Node already got a different type of value
+// ErrorMultipleType error if a Node already got a different type of value
 var ErrorMultipleType = errors.New("jsongo this node is already set to a different NodeType")
 
-//ErrorArrayNegativeValue error if you ask for a negative index in an array
+// ErrorArrayNegativeValue error if you ask for a negative index in an array
 var ErrorArrayNegativeValue = errors.New("jsongo negative index for array")
 
-//ErrorArrayNegativeValue error if you ask for a negative index in an array
+// ErrorArrayNegativeValue error if you ask for a negative index in an array
 var ErrorAtUnsupportedType = errors.New("jsongo Unsupported Type as At argument")
 
-//ErrorRetrieveUserValue error if you ask the value of a node that is not a value node
+// ErrorRetrieveUserValue error if you ask the value of a node that is not a value node
 var ErrorRetrieveUserValue = errors.New("jsongo Cannot retrieve node's value which is not of type value")
 
-//ErrorTypeUnmarshaling error if you try to unmarshal something in the wrong type
+// ErrorTypeUnmarshaling error if you try to unmarshal something in the wrong type
 var ErrorTypeUnmarshaling = errors.New("jsongo Wrong type when Unmarshaling")
 
-//ErrorUnknowType error if you try to use an unknow NodeType
+// ErrorUnknowType error if you try to use an unknow NodeType
 var ErrorUnknowType = errors.New("jsongo Unknow NodeType")
 
-//ErrorValNotPointer error if you try to use Val without a valid pointer
+// ErrorValNotPointer error if you try to use Val without a valid pointer
 var ErrorValNotPointer = errors.New("jsongo: Val: arguments must be a pointer and not nil")
 
-//ErrorGetKeys error if you try to get the keys from a Node that isnt a TypeMap or a TypeArray
+// ErrorGetKeys error if you try to get the keys from a Node that isnt a TypeMap or a TypeArray
 var ErrorGetKeys = errors.New("jsongo: GetKeys: Node is not a TypeMap or TypeArray")
 
-//ErrorDeleteKey error if you try to call DelKey on a Node that isnt a TypeMap
+// ErrorDeleteKey error if you try to call DelKey on a Node that isnt a TypeMap
 var ErrorDeleteKey = errors.New("jsongo: DelKey: This Node is not a TypeMap")
 
-//ErrorCopyType error if you try to call Copy on a Node that isnt a TypeUndefined
+// ErrorCopyType error if you try to call Copy on a Node that isnt a TypeUndefined
 var ErrorCopyType = errors.New("jsongo: Copy: This Node is not a TypeUndefined")
 
-//Node Datastructure to build and maintain Nodes
+// Node Datastructure to build and maintain Nodes
 type Node struct {
 	m          map[string]*Node
 	a          []Node
@@ -61,7 +61,7 @@ type Node struct {
 	dontExpand bool     //dont expand while Unmarshal
 }
 
-//NodeType is used to set, check and get the inner type of a Node
+// NodeType is used to set, check and get the inner type of a Node
 type NodeType uint
 
 const (
@@ -77,13 +77,13 @@ const (
 	typeError
 )
 
-//At helps you move through your node by building them on the fly
+// At helps you move through your node by building them on the fly
 //
-//val can be string or int only
+// val can be string or int only
 //
-//strings are keys for TypeMap
+// strings are keys for TypeMap
 //
-//ints are index in TypeArray (it will make array grow on the fly, so you should start to populate with the biggest index first)*
+// ints are index in TypeArray (it will make array grow on the fly, so you should start to populate with the biggest index first)*
 func (that *Node) At(val ...interface{}) *Node {
 	if len(val) == 0 {
 		return that
@@ -97,7 +97,7 @@ func (that *Node) At(val ...interface{}) *Node {
 	panic(ErrorAtUnsupportedType)
 }
 
-//atMap return the Node in current map
+// atMap return the Node in current map
 func (that *Node) atMap(key string, val ...interface{}) *Node {
 	if that.t != TypeUndefined && that.t != TypeMap {
 		panic(ErrorMultipleType)
@@ -113,7 +113,7 @@ func (that *Node) atMap(key string, val ...interface{}) *Node {
 	return that.m[key].At(val...)
 }
 
-//atArray return the Node in current TypeArray (and make it grow if necessary)
+// atArray return the Node in current TypeArray (and make it grow if necessary)
 func (that *Node) atArray(key int, val ...interface{}) *Node {
 	if that.t == TypeUndefined {
 		that.t = TypeArray
@@ -133,7 +133,7 @@ func (that *Node) atArray(key int, val ...interface{}) *Node {
 	return that.a[key].At(val...)
 }
 
-//Map Turn this Node to a TypeMap and/or Create a new element for key if necessary and return it
+// Map Turn this Node to a TypeMap and/or Create a new element for key if necessary and return it
 func (that *Node) Map(key string) *Node {
 	if that.t != TypeUndefined && that.t != TypeMap {
 		panic(ErrorMultipleType)
@@ -149,7 +149,7 @@ func (that *Node) Map(key string) *Node {
 	return that.m[key]
 }
 
-//Array Turn this Node to a TypeArray and/or set the array size (reducing size will make you loose data)
+// Array Turn this Node to a TypeArray and/or set the array size (reducing size will make you loose data)
 func (that *Node) Array(size int) *[]Node {
 	if that.t == TypeUndefined {
 		that.t = TypeArray
@@ -173,7 +173,7 @@ func (that *Node) Array(size int) *[]Node {
 	return &(that.a)
 }
 
-//Val Turn this Node to Value type and/or set that value to val
+// Val Turn this Node to Value type and/or set that value to val
 func (that *Node) Val(val interface{}) {
 	if that.t == TypeUndefined {
 		that.t = TypeValue
@@ -202,7 +202,7 @@ func (that *Node) Val(val interface{}) {
 	that.v = finalval
 }
 
-//Get Return value of a TypeValue as interface{}
+// Get Return value of a TypeValue as interface{}
 func (that *Node) Get() interface{} {
 	if that.t != TypeValue {
 		panic(ErrorRetrieveUserValue)
@@ -298,7 +298,7 @@ func (that *Node) MustGetFloat64() float64 {
 	return that.Get().(float64)
 }
 
-//GetKeys Return a slice interface that represent the keys to use with the At fonction (Works only on TypeMap and TypeArray)
+// GetKeys Return a slice interface that represent the keys to use with the At fonction (Works only on TypeMap and TypeArray)
 func (that *Node) GetKeys() []interface{} {
 	var ret []interface{}
 	switch that.t {
@@ -322,7 +322,7 @@ func (that *Node) GetKeys() []interface{} {
 	return ret
 }
 
-//Len Return the length of the current Node
+// Len Return the length of the current Node
 //
 // if TypeUndefined return 0
 //
@@ -344,7 +344,7 @@ func (that *Node) Len() int {
 	return ret
 }
 
-//SetType Is use to set the Type of a node and return the current Node you are working on
+// SetType Is use to set the Type of a node and return the current Node you are working on
 func (that *Node) SetType(t NodeType) *Node {
 	if that.t != TypeUndefined && that.t != t {
 		panic(ErrorMultipleType)
@@ -364,16 +364,16 @@ func (that *Node) SetType(t NodeType) *Node {
 	return that
 }
 
-//GetType Is use to Get the Type of a node
+// GetType Is use to Get the Type of a node
 func (that *Node) GetType() NodeType {
 	return that.t
 }
 
-//Copy Will set this node like the one in argument. this node must be of type TypeUndefined
+// Copy Will set this node like the one in argument. this node must be of type TypeUndefined
 //
-//if deepCopy is true we will copy all the children recursively else we will share the children
+// if deepCopy is true we will copy all the children recursively else we will share the children
 //
-//return the current Node
+// return the current Node
 func (that *Node) Copy(other *Node, deepCopy bool) *Node {
 	if that.t != TypeUndefined {
 		panic(ErrorCopyType)
@@ -405,14 +405,14 @@ func (that *Node) Copy(other *Node, deepCopy bool) *Node {
 	return that
 }
 
-//Unset Will unset everything in the Node. All the children data will be lost
+// Unset Will unset everything in the Node. All the children data will be lost
 func (that *Node) Unset() {
 	*that = Node{}
 }
 
-//DelKey will remove a key in the map.
+// DelKey will remove a key in the map.
 //
-//return the current Node.
+// return the current Node.
 func (that *Node) DelKey(key string) *Node {
 	if that.t != TypeMap {
 		panic(ErrorDeleteKey)
@@ -421,21 +421,21 @@ func (that *Node) DelKey(key string) *Node {
 	return that
 }
 
-//UnmarshalDontExpand set or not if Unmarshall will generate anything in that Node and its children
+// UnmarshalDontExpand set or not if Unmarshall will generate anything in that Node and its children
 //
-//val: will change the expanding rules for this node
+// val: will change the expanding rules for this node
 //
-//- The type wont be change for any type
+// - The type wont be change for any type
 //
-//- Array wont grow
+// - Array wont grow
 //
-//- New keys wont be added to Map
+// - New keys wont be added to Map
 //
-//- Values set to nil "*.Val(nil)*" will be turn into the type decide by Json
+// - Values set to nil "*.Val(nil)*" will be turn into the type decide by Json
 //
-//- It will respect any current mapping and will return errors if needed
+// - It will respect any current mapping and will return errors if needed
 //
-//recurse: if true, it will set all the children of that Node with val
+// recurse: if true, it will set all the children of that Node with val
 func (that *Node) UnmarshalDontExpand(val bool, recurse bool) *Node {
 	that.dontExpand = val
 	if recurse {
@@ -453,7 +453,7 @@ func (that *Node) UnmarshalDontExpand(val bool, recurse bool) *Node {
 	return that
 }
 
-//MarshalJSON Make Node a Marshaler Interface compatible
+// MarshalJSON Make Node a Marshaler Interface compatible
 func (that *Node) MarshalJSON() ([]byte, error) {
 	var ret []byte
 	var err error
@@ -501,6 +501,7 @@ func (that *Node) unmarshalArray(data []byte) error {
 	if err != nil {
 		return err
 	}
+	that.SetType(TypeArray)
 	for i := len(tmp) - 1; i >= 0; i-- {
 		if !that.dontExpand || i < len(that.a) {
 			err := json.Unmarshal(tmp[i], that.At(i))
@@ -525,7 +526,7 @@ func (that *Node) unmarshalValue(data []byte) error {
 	return nil
 }
 
-//UnmarshalJSON Make Node a Unmarshaler Interface compatible
+// UnmarshalJSON Make Node a Unmarshaler Interface compatible
 func (that *Node) UnmarshalJSON(data []byte) error {
 	if len(data) == 0 {
 		return nil
