@@ -9,7 +9,7 @@ jsongo
 
 ***If you want an easy way to turn your json into a structure you should use the "[Print](#print)" function after unmarshalling json in a Node***
 
-***[2024/09/05] Project is not dead. We are using it quite often. We haven't found any necessary update***
+***[2024/11/18] Project is not dead. We are using it quite often. We haven't found any necessary update***
 
 You can find the doc on godoc.org [![GoDoc](https://godoc.org/github.com/bennyscetbun/jsongo?status.png)](https://godoc.org/github.com/bennyscetbun/jsongo)
 
@@ -17,16 +17,16 @@ You can find the doc on godoc.org [![GoDoc](https://godoc.org/github.com/bennysc
 ## Node
 
 Node is the basic Structure that you must use when using jsongo. It can either be a:
-- Map (jsongo.TypeMap)
-- Array (jsongo.TypeArray)
-- Value (jsongo.TypeValue) *Precisely a pointer store in an interface{}*
-- Undefined (jsongo.TypeUndefined) *default type*
+- Map (jsongo.NodeTypeMap)
+- Array (jsongo.NodeTypeArray)
+- Value (jsongo.NodeTypeValue) *Precisely a pointer store in an interface{}*
+- Undefined (jsongo.NodeTypeUndefined) *default type*
 
 *When a Node Type is set you cant change it without using Unset() first*
 ____
 ### Val
 #### Synopsis:
-turn this Node to TypeValue and set that value
+turn this Node to NodeTypeValue and set that value
 ```go
 func (that *Node) Val(val interface{}) 
 ```
@@ -78,7 +78,7 @@ func main() {
 _____
 ### Array
 #### Synopsis:
- Turn this Node to a TypeArray and/or set the array size (reducing size will make you loose data)
+ Turn this Node to a NodeTypeArray and/or set the array size (reducing size will make you loose data)
 ```go
 func (that *Node) Array(size int) *[]Node
 ```
@@ -138,7 +138,7 @@ func main() {
 ____
 ### Map
 #### Synopsis:
-Turn this Node to a TypeMap and/or Create a new element for key if necessary and return it
+Turn this Node to a NodeTypeMap and/or Create a new element for key if necessary and return it
 ```go
 func (that *Node) Map(key string) *Node
 ```
@@ -173,9 +173,9 @@ Helps you move through your node by building them on the fly
 
 *val can be string or int only*
 
-*strings are keys for TypeMap*
+*strings are keys for NodeTypeMap*
 
-*ints are index in TypeArray (it will make array grow on the fly, so you should start to populate with the biggest index first)*
+*ints are index in NodeTypeArray (it will make array grow on the fly, so you should start to populate with the biggest index first)*
 ```go
 func (that *Node) At(val ...interface{}) *Node
 ```
@@ -272,13 +272,13 @@ import (
 
 func ShowOnlyValue(current *jsongo.Node) {
     switch current.GetType() {
-    	case jsongo.TypeValue:
+    	case jsongo.NodeTypeValue:
 			println(current.Get().(string))
-		case jsongo.TypeMap:
+		case jsongo.NodeTypeMap:
 			for _, key := range current.GetKeys() {
 				ShowOnlyValue(current.At(key))
 			}
-		case jsongo.TypeArray:
+		case jsongo.NodeTypeArray:
 			for _, key := range current.GetKeys() {
 				ShowOnlyValue(current.At(key))
 			}
@@ -363,7 +363,7 @@ func main() {
 ____
 ### Unmarshal
 Unmarshal using Node follow some simple rules:
-- Any TypeUndefined Node will be set to the right type, any other type wont be changed
+- Any NodeTypeUndefined Node will be set to the right type, any other type wont be changed
 - Array will grow if necessary
 - New keys will be added to Map
 - Values set to nil "*.Val(nil)*" will be turn into the type decide by Json
@@ -414,33 +414,33 @@ func main() {
 ```
 ##### output:
 ```
-Is of Type: TypeMap
+Is of Type: NodeTypeMap
 A:
-        Is of Type: TypeMap
+        Is of Type: NodeTypeMap
         AA:
-                Is of Type: TypeMap
+                Is of Type: NodeTypeMap
                 AAA:
-                        Is of Type: TypeValue
+                        Is of Type: NodeTypeValue
                         Value of type: float64
                         42
         AB:
-                Is of Type: TypeArray
+                Is of Type: NodeTypeArray
                 [0]:
-                        Is of Type: TypeMap
+                        Is of Type: NodeTypeMap
                         static:
-                                Is of Type: TypeValue
+                                Is of Type: NodeTypeValue
                                 Value of type: string
                                 struct suck when you build json
                         over:
-                                Is of Type: TypeValue
+                                Is of Type: NodeTypeValue
                                 Value of type: float64
                                 9000
                 [1]:
-                        Is of Type: TypeValue
+                        Is of Type: NodeTypeValue
                         Value of type: string
                         Peace
 B:
-        Is of Type: TypeValue
+        Is of Type: NodeTypeValue
         Value of type: string
         Oh Yeah
 ```
@@ -487,27 +487,27 @@ func main() {
 ```
 ##### output:
 ```
-Is of Type: TypeMap
+Is of Type: NodeTypeMap
 A:
-        Is of Type: TypeMap
+        Is of Type: NodeTypeMap
         AB:
-                Is of Type: TypeArray
+                Is of Type: NodeTypeArray
                 [0]:
-                        Is of Type: TypeValue
+                        Is of Type: NodeTypeValue
                         Value of type: main.Test
                         {Static:struct suck when you build json Over:9000}
                 [1]:
-                        Is of Type: TypeValue
+                        Is of Type: NodeTypeValue
                         Value of type: string
                         Peace
         AA:
-                Is of Type: TypeMap
+                Is of Type: NodeTypeMap
                 AAA:
-                        Is of Type: TypeValue
+                        Is of Type: NodeTypeValue
                         Value of type: float64
                         42
 B:
-        Is of Type: TypeValue
+        Is of Type: NodeTypeValue
         Value of type: string
         Oh Yeah
 ```
@@ -554,23 +554,23 @@ func main() {
 ```
 ##### output:
 ```
-Is of Type: TypeMap
+Is of Type: NodeTypeMap
 A:
-        Is of Type: TypeMap
+        Is of Type: NodeTypeMap
         AB:
-                Is of Type: TypeArray
+                Is of Type: NodeTypeArray
                 [0]:
-                        Is of Type: TypeValue
+                        Is of Type: NodeTypeValue
                         Value of type: main.Test
                         {Static:struct suck when you build json Over:9000}
         AA:
-                Is of Type: TypeMap
+                Is of Type: NodeTypeMap
                 AAA:
-                        Is of Type: TypeValue
+                        Is of Type: NodeTypeValue
                         Value of type: float64
                         42
 B:
-        Is of Type: TypeValue
+        Is of Type: NodeTypeValue
         Value of type: string
         Oh Yeah
 ```

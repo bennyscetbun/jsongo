@@ -61,21 +61,21 @@ func (that *Node) printArray(indentlevel int, indentchar string) {
 	}
 }
 
-//DebugProspect Print all the data the we ve got on a node and all it s children
+// DebugProspect Print all the data the we ve got on a node and all it s children
 func (that *Node) print(indentlevel int, indentchar string) {
 	switch that.t {
-	case TypeValue:
+	case NodeTypeValue:
 		that.printValue(indentlevel, indentchar)
-	case TypeMap:
+	case NodeTypeMap:
 		that.printMap(indentlevel, indentchar)
-	case TypeArray:
+	case NodeTypeArray:
 		that.printArray(indentlevel, indentchar)
-	case TypeUndefined:
-		printfindent(indentlevel, indentchar, "Is of Type: TypeUndefined\n")
+	case NodeTypeUndefined:
+		printfindent(indentlevel, indentchar, "Is of Type: NodeTypeUndefined\n")
 	}
 }
 
-//Print Print all the data the we ve got on a node and all it s children as a go struct :) (FOR DEV PURPOSE)
+// Print Print all the data the we ve got on a node and all it s children as a go struct :) (FOR DEV PURPOSE)
 func (that *Node) Print() {
 	that.print(0, "\t")
 	fmt.Printf("\n")
