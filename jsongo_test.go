@@ -56,6 +56,10 @@ func TestMarshaling(t *testing.T) {
 			ret.At(4).Val("youpi")
 			return
 		},
+		`[null,null,0]`: func() (ret Node) {
+			ret.At(2).Val(0)
+			return
+		},
 	}
 
 	for expected, f := range tests {
