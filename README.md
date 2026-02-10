@@ -258,6 +258,47 @@ func (that *Node) Print()
 ```
 
 ____
+### Merge
+#### Synopsis:
+Merge two nodes into a new node. Copies the first node then merges the second into it; the original nodes are not modified. Both nodes must have the same type (Map, Array, or Value). For maps, keys from the second node are merged in recursively; for arrays, elements are merged by index and extra elements from the second are appended; for values, both must be equal or Merge panics.
+```go
+func Merge(a, b *Node) *Node
+```
+
+#### Examples
+##### code:
+```go
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"github.com/bennyscetbun/jsongo"
+)
+
+func main() {
+	a := jsongo.Node{}
+	_ = json.Unmarshal([]byte(`{"b": {"c": 1}, "a": {}}`), &a)
+	b := jsongo.Node{}
+	_ = json.Unmarshal([]byte(`{"b": {"d": 2}, "a": {"x": 42}}`), &b)
+	merged := jsongo.Merge(&a, &b)
+	out, _ := json.MarshalIndent(merged, "", "  ")
+	fmt.Println(string(out))
+}
+```
+##### output:
+```
+{
+  "a": {
+    "x": 42
+  },
+  "b": {
+    "c": 1,
+    "d": 2
+  }
+}
+```
+____
 ### Other Function
 There is plenty of other function, you should check the complete doc [![GoDoc](https://godoc.org/github.com/bennyscetbun/jsongo?status.png)](https://godoc.org/github.com/bennyscetbun/jsongo)
 
