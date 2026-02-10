@@ -54,7 +54,7 @@ var ErrorCopyType = errors.New("jsongo: Copy: This Node is not a NodeTypeUndefin
 // Node Datastructure to build and maintain Nodes
 type Node struct {
 	m          map[string]*Node
-	a          []Node
+	a          []*Node
 	v          interface{}
 	vChanged   bool     //True if we changed the type of the value
 	t          NodeType //Type of that Node 0: Not defined, 1: map, 2: array, 3: value
@@ -124,11 +124,12 @@ func (that *Node) atArray(key int, val ...interface{}) *Node {
 		panic(ErrorArrayNegativeValue)
 	}
 	if key >= len(that.a) {
-		newa := make([]Node, key+1)
-		for i := 0; i < len(that.a); i++ {
-			newa[i] = that.a[i]
-		}
+		newa := make([]*Node, key+1)
+		copy(newa, that.a)
 		that.a = newa
+	}
+	if that.a[key] == nil {
+		that.a[key] = &Node{}
 	}
 	return that.a[key].At(val...)
 }
@@ -150,7 +151,7 @@ func (that *Node) Map(key string) *Node {
 }
 
 // Array Turn this Node to a NodeTypeArray and/or set the array size (reducing size will make you loose data)
-func (that *Node) Array(size int) *[]Node {
+func (that *Node) Array(size int) *[]*Node {
 	if that.t == NodeTypeUndefined {
 		that.t = NodeTypeArray
 	} else if that.t != NodeTypeArray {
@@ -165,7 +166,7 @@ func (that *Node) Array(size int) *[]Node {
 	} else {
 		min = len(that.a)
 	}
-	newa := make([]Node, size)
+	newa := make([]*Node, size)
 	for i := 0; i < min; i++ {
 		newa[i] = that.a[i]
 	}
@@ -357,7 +358,7 @@ func (that *Node) SetType(t NodeType) *Node {
 	case NodeTypeMap:
 		that.m = make(map[string]*Node, 0)
 	case NodeTypeArray:
-		that.a = make([]Node, 0)
+		that.a = make([]*Node, 0)
 	case NodeTypeValue:
 		that.Val(nil)
 	}
@@ -379,9 +380,10 @@ func (that *Node) Copy(other *Node, deepCopy bool) *Node {
 		panic(ErrorCopyType)
 	}
 
-	if other.t == NodeTypeValue {
+	switch other.t {
+	case NodeTypeValue:
 		*that = *other
-	} else if other.t == NodeTypeArray {
+	case NodeTypeArray:
 		if !deepCopy {
 			*that = *other
 		} else {
@@ -390,7 +392,7 @@ func (that *Node) Copy(other *Node, deepCopy bool) *Node {
 				that.At(i).Copy(other.At(i), deepCopy)
 			}
 		}
-	} else if other.t == NodeTypeMap {
+	case NodeTypeMap:
 		that.SetType(other.t)
 		if !deepCopy {
 			for val := range other.m {
@@ -479,6 +481,7 @@ func (that *Node) unmarshalMap(data []byte) error {
 	if err != nil {
 		return err
 	}
+	that.SetType(NodeTypeMap)
 	for k := range tmp {
 		if _, ok := that.m[k]; ok {
 			err := json.Unmarshal(tmp[k], that.m[k])
@@ -554,4 +557,58 @@ func (that *Node) UnmarshalJSON(data []byte) error {
 		return that.unmarshalValue(data)
 	}
 	return ErrorTypeUnmarshaling
+}
+
+func (that *Node) Merge(other *Node) {
+	if that.t == NodeTypeUndefined {
+		that.Copy(other, true)
+		return
+	}
+	if other.t == NodeTypeUndefined {
+		return
+	}
+	if that.t != other.t {
+		thatData, err := json.MarshalIndent(that, "", "  ")
+		if err != nil {
+			panic(err)
+		}
+		otherData, err := json.MarshalIndent(other, "", "  ")
+		if err != nil {
+			panic(err)
+		}
+		panic("cannot merge nodes of different types: " + string(thatData) + " and " + string(otherData))
+	}
+	switch that.t {
+	case NodeTypeMap:
+		for k := range other.m {
+			node, ok := that.m[k]
+			if !ok {
+				node = that.Map(k)
+			}
+			node.Merge(other.m[k])
+		}
+	case NodeTypeArray:
+		if len(that.a) < len(other.a) {
+			for i := range that.a {
+				that.a[i].Merge(other.a[i])
+			}
+			that.a = append(that.a, other.a[len(that.a):]...)
+		} else {
+			for i := range other.a {
+				that.a[i].Merge(other.a[i])
+			}
+		}
+
+	case NodeTypeValue:
+		if !reflect.DeepEqual(that.v, other.v) {
+			panic("value already set")
+		}
+	}
+}
+
+func Merge(a, b *Node) *Node {
+	newNode := Node{}
+	newNode.Copy(a, true)
+	newNode.Merge(b)
+	return &newNode
 }

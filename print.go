@@ -28,7 +28,7 @@ func UpperCamelCase(str string) string {
 	return strings.Join(pieces, ``)
 }
 
-func (that *Node) printValue(indentlevel int, indentchar string) {
+func (that *Node) printValue() {
 	fmt.Printf(" %T ", that.Get())
 }
 
@@ -65,7 +65,7 @@ func (that *Node) printArray(indentlevel int, indentchar string) {
 func (that *Node) print(indentlevel int, indentchar string) {
 	switch that.t {
 	case NodeTypeValue:
-		that.printValue(indentlevel, indentchar)
+		that.printValue()
 	case NodeTypeMap:
 		that.printMap(indentlevel, indentchar)
 	case NodeTypeArray:
