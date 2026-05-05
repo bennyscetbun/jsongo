@@ -14,7 +14,9 @@ package jsongo
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"reflect"
+	"strconv"
 	//"fmt"
 )
 
@@ -559,7 +561,18 @@ func (that *Node) UnmarshalJSON(data []byte) error {
 	return ErrorTypeUnmarshaling
 }
 
-func (that *Node) Merge(other *Node) {
+func panicWithPath(path string, v interface{}) {
+	panic(fmt.Sprintf("%s: %v", path, v))
+}
+
+func mergePath(path string, newKey string) string {
+	if path == "" {
+		return newKey
+	}
+	return path + "." + newKey
+}
+
+func (that *Node) internalMerge(path string, other *Node) {
 	if that.t == NodeTypeUndefined {
 		that.Copy(other, true)
 		return
@@ -570,13 +583,13 @@ func (that *Node) Merge(other *Node) {
 	if that.t != other.t {
 		thatData, err := json.MarshalIndent(that, "", "  ")
 		if err != nil {
-			panic(err)
+			panicWithPath(path, err)
 		}
 		otherData, err := json.MarshalIndent(other, "", "  ")
 		if err != nil {
-			panic(err)
+			panicWithPath(path, err)
 		}
-		panic("cannot merge nodes of different types: " + string(thatData) + " and " + string(otherData))
+		panicWithPath(path, "cannot merge nodes of different types: "+string(thatData)+" and "+string(otherData))
 	}
 	switch that.t {
 	case NodeTypeMap:
@@ -585,25 +598,29 @@ func (that *Node) Merge(other *Node) {
 			if !ok {
 				node = that.Map(k)
 			}
-			node.Merge(other.m[k])
+			node.internalMerge(mergePath(path, k), other.m[k])
 		}
 	case NodeTypeArray:
 		if len(that.a) < len(other.a) {
 			for i := range that.a {
-				that.a[i].Merge(other.a[i])
+				that.a[i].internalMerge(mergePath(path, strconv.Itoa(i)), other.a[i])
 			}
 			that.a = append(that.a, other.a[len(that.a):]...)
 		} else {
 			for i := range other.a {
-				that.a[i].Merge(other.a[i])
+				that.a[i].internalMerge(mergePath(path, strconv.Itoa(i)), other.a[i])
 			}
 		}
 
 	case NodeTypeValue:
 		if !reflect.DeepEqual(that.v, other.v) {
-			panic("value already set")
+			panicWithPath(path, "value already set")
 		}
 	}
+}
+
+func (that *Node) Merge(other *Node) {
+	that.internalMerge("", other)
 }
 
 func Merge(a, b *Node) *Node {

@@ -2,6 +2,7 @@ package jsongo
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -9,6 +10,7 @@ import (
 func assertPanics(t *testing.T, expectedPanic string, f func()) {
 	defer func() {
 		if r := recover(); r != nil {
+			fmt.Println("panic: ", r)
 			if strings.Contains(r.(string), expectedPanic) {
 				return
 			}
