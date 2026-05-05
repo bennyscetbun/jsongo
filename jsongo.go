@@ -572,7 +572,7 @@ func mergePath(path string, newKey string) string {
 	return path + "." + newKey
 }
 
-func (that *Node) internalMerge(path string, other *Node) {
+func (that *Node) internalMerge(path string, other *Node, overwrite bool) {
 	if that.t == NodeTypeUndefined {
 		that.Copy(other, true)
 		return
@@ -598,34 +598,47 @@ func (that *Node) internalMerge(path string, other *Node) {
 			if !ok {
 				node = that.Map(k)
 			}
-			node.internalMerge(mergePath(path, k), other.m[k])
+			node.internalMerge(mergePath(path, k), other.m[k], overwrite)
 		}
 	case NodeTypeArray:
 		if len(that.a) < len(other.a) {
 			for i := range that.a {
-				that.a[i].internalMerge(mergePath(path, strconv.Itoa(i)), other.a[i])
+				that.a[i].internalMerge(mergePath(path, strconv.Itoa(i)), other.a[i], overwrite)
 			}
 			that.a = append(that.a, other.a[len(that.a):]...)
 		} else {
 			for i := range other.a {
-				that.a[i].internalMerge(mergePath(path, strconv.Itoa(i)), other.a[i])
+				that.a[i].internalMerge(mergePath(path, strconv.Itoa(i)), other.a[i], overwrite)
 			}
 		}
 
 	case NodeTypeValue:
-		if !reflect.DeepEqual(that.v, other.v) {
+		if overwrite {
+			that.Val(other.v)
+		} else if !reflect.DeepEqual(that.v, other.v) {
 			panicWithPath(path, "value already set")
 		}
 	}
 }
 
 func (that *Node) Merge(other *Node) {
-	that.internalMerge("", other)
+	that.internalMerge("", other, false)
 }
 
 func Merge(a, b *Node) *Node {
 	newNode := Node{}
 	newNode.Copy(a, true)
 	newNode.Merge(b)
+	return &newNode
+}
+
+func (that *Node) MergeWithOverwrite(otherThatOverwrites *Node) {
+	that.internalMerge("", otherThatOverwrites, true)
+}
+
+func MergeWithOverwrite(a, bThatOverwrites *Node) *Node {
+	newNode := Node{}
+	newNode.Copy(a, true)
+	newNode.MergeWithOverwrite(bThatOverwrites)
 	return &newNode
 }
